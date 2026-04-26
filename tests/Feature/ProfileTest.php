@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -79,16 +80,23 @@ class ProfileTest extends TestCase
         $this->assertNull($user->fresh());
     }
 
-    public function test_passwordless_zklogin_user_can_delete_their_account_without_password(): void
+    public function test_passwordless_zklogin_user_can_delete_their_account_with_correct_pin(): void
     {
+        $pinVerifier = hash('sha256', 'google-sub|zk@example.com|123456');
+
         $user = User::factory()->create([
+            'email' => 'zk@example.com',
             'password' => null,
             'wallet_address' => '0x' . str_repeat('a', 64),
+            'zk_subject' => 'google-sub',
+            'zk_pin_hash' => Hash::make($pinVerifier),
         ]);
 
         $response = $this
             ->actingAs($user)
-            ->delete('/profile');
+            ->delete('/profile', [
+                'zk_pin' => '123456',
+            ]);
 
         $response
             ->assertSessionHasNoErrors()
@@ -96,6 +104,55 @@ class ProfileTest extends TestCase
 
         $this->assertGuest();
         $this->assertNull($user->fresh());
+    }
+
+    public function test_passwordless_zklogin_user_cannot_delete_account_with_wrong_pin(): void
+    {
+        $pinVerifier = hash('sha256', 'google-sub|zk@example.com|123456');
+
+        $user = User::factory()->create([
+            'email' => 'zk@example.com',
+            'password' => null,
+            'wallet_address' => '0x' . str_repeat('a', 64),
+            'zk_subject' => 'google-sub',
+            'zk_pin_hash' => Hash::make($pinVerifier),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile', [
+                'zk_pin' => '999999',
+            ]);
+
+        $response
+            ->assertSessionHasErrorsIn('userDeletion', 'zk_pin')
+            ->assertRedirect('/profile');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh());
+    }
+
+    public function test_passwordless_zklogin_user_must_enter_pin_to_delete_account(): void
+    {
+        $user = User::factory()->create([
+            'password' => null,
+            'wallet_address' => '0x' . str_repeat('a', 64),
+            'zk_subject' => 'google-sub',
+            'zk_pin_hash' => Hash::make(hash('sha256', 'google-sub|' . 'user@example.com' . '|123456')),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile');
+
+        $response
+            ->assertSessionHasErrorsIn('userDeletion', 'zk_pin')
+            ->assertRedirect('/profile');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh());
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

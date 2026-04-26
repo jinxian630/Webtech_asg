@@ -65,6 +65,7 @@ async function handleZkLoginCallback() {
                 wallet_address: zkLoginAddress,
                 email: decodedJwt.email,
                 name: decodedJwt.name || null,
+                zk_subject: decodedJwt.sub,
                 zk_pin_verifier: verifier,
             }),
         });

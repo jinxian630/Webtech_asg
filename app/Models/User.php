@@ -27,6 +27,7 @@ class User extends Authenticatable
         'sui_address',
         'sui_finance_profile_id',
         'zk_pin_hash',
+        'zk_subject',
         'wallet_onboarded_at',
         'total_saved',
         'wallet_balance',

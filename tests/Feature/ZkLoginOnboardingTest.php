@@ -45,6 +45,7 @@ class ZkLoginOnboardingTest extends TestCase
             'wallet_address' => '0xzkloginwallet',
             'email' => 'zk@example.com',
             'name' => 'ZK User',
+            'zk_subject' => 'google-sub',
             'zk_pin_verifier' => $verifier,
         ])->assertOk()
             ->assertJson([
@@ -57,6 +58,7 @@ class ZkLoginOnboardingTest extends TestCase
         $this->assertSame('ZK User', $user->name);
         $this->assertSame('user', $user->role);
         $this->assertSame('0xzkloginwallet', $user->wallet_address);
+        $this->assertSame('google-sub', $user->zk_subject);
         $this->assertNotSame($verifier, $user->zk_pin_hash);
         $this->assertTrue(Hash::check($verifier, $user->zk_pin_hash));
         $this->assertNull($user->wallet_onboarded_at);
@@ -77,6 +79,7 @@ class ZkLoginOnboardingTest extends TestCase
         $this->postJson('/auth/zklogin', [
             'wallet_address' => '0xreturningwallet',
             'email' => 'returning@example.com',
+            'zk_subject' => 'google-sub',
             'zk_pin_verifier' => $verifier,
         ])->assertOk()
             ->assertJson([

@@ -185,6 +185,9 @@
                 </div>
 
                 {{-- DELETE ACCOUNT --}}
+                @php
+                    $isPasswordlessWalletAccount = empty($user->password) && !empty($user->wallet_address ?? $user->sui_address);
+                @endphp
                 <div style="background:#12121e;border:1px solid rgba(248,113,113,0.15);border-radius:1rem;padding:1.5rem;box-shadow:0 4px 24px rgba(0,0,0,0.4);" x-data="{ confirm: false }">
                     <div style="margin-bottom:1rem;">
                         <h2 style="color:#f87171;font-size:1rem;font-weight:600;">Danger Zone</h2>
@@ -197,18 +200,36 @@
                         🗑️ Delete Account
                     </button>
 
-                    <div x-show="confirm" x-cloak x-transition
+                    @if($isPasswordlessWalletAccount)
+                        <style>.delete-confirm-panel > p:first-of-type { display: none; }</style>
+                    @endif
+                    <div class="delete-confirm-panel" x-show="confirm" x-cloak x-transition
                          style="margin-top:1rem;background:#0a0a14;border:1px solid rgba(248,113,113,0.2);border-radius:0.875rem;padding:1rem;">
                         <p style="color:#f87171;font-size:0.8rem;font-weight:600;margin-bottom:0.75rem;">⚠️ Type your password to confirm deletion:</p>
+                        @if($isPasswordlessWalletAccount)
+                            <p style="color:#fca5a5;font-size:0.75rem;margin:-0.35rem 0 0.75rem;">For Web3 accounts, enter your Nuance PIN below.</p>
+                        @else
+                            <p style="display:none;"></p>
+                        @endif
                         <form method="post" action="{{ route('profile.destroy') }}">
                             @csrf
                             @method('delete')
-                            <input type="password" name="password" placeholder="Enter your password"
-                                   style="width:100%;background:#12121e;border:1px solid rgba(248,113,113,0.3);border-radius:0.625rem;color:#e2e2f2;padding:0.5rem 0.75rem;font-size:0.875rem;outline:none;margin-bottom:0.75rem;box-sizing:border-box;"
-                                   onfocus="this.style.borderColor='rgba(248,113,113,0.7)'" onblur="this.style.borderColor='rgba(248,113,113,0.3)'">
-                            @error('password', 'userDeletion')
-                                <p style="color:#f87171;font-size:0.7rem;margin-bottom:0.5rem;">{{ $message }}</p>
-                            @enderror
+                            @if($isPasswordlessWalletAccount)
+                                <input type="password" name="zk_pin" inputmode="numeric" maxlength="6" placeholder="Enter your Nuance PIN"
+                                       style="width:100%;background:#12121e;border:1px solid rgba(248,113,113,0.3);border-radius:0.625rem;color:#e2e2f2;padding:0.5rem 0.75rem;font-size:0.875rem;outline:none;margin-bottom:0.75rem;box-sizing:border-box;"
+                                       oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)"
+                                       onfocus="this.style.borderColor='rgba(248,113,113,0.7)'" onblur="this.style.borderColor='rgba(248,113,113,0.3)'">
+                                @error('zk_pin', 'userDeletion')
+                                    <p style="color:#f87171;font-size:0.7rem;margin-bottom:0.5rem;">{{ $message }}</p>
+                                @enderror
+                            @else
+                                <input type="password" name="password" placeholder="Enter your password"
+                                       style="width:100%;background:#12121e;border:1px solid rgba(248,113,113,0.3);border-radius:0.625rem;color:#e2e2f2;padding:0.5rem 0.75rem;font-size:0.875rem;outline:none;margin-bottom:0.75rem;box-sizing:border-box;"
+                                       onfocus="this.style.borderColor='rgba(248,113,113,0.7)'" onblur="this.style.borderColor='rgba(248,113,113,0.3)'">
+                                @error('password', 'userDeletion')
+                                    <p style="color:#f87171;font-size:0.7rem;margin-bottom:0.5rem;">{{ $message }}</p>
+                                @enderror
+                            @endif
                             <div style="display:flex;gap:0.5rem;">
                                 <button type="submit"
                                         style="flex:1;background:#ef4444;color:white;font-weight:600;border-radius:0.625rem;padding:0.5rem;font-size:0.8rem;border:none;cursor:pointer;transition:background 0.2s;"

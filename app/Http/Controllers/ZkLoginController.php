@@ -18,6 +18,7 @@ class ZkLoginController extends Controller
             'wallet_address' => 'required|string',
             'email' => 'required|email',
             'name' => 'nullable|string|max:255',
+            'zk_subject' => 'nullable|string|max:255',
             'zk_pin_verifier' => 'required|string|min:32|max:255',
         ]);
 
@@ -38,6 +39,7 @@ class ZkLoginController extends Controller
                 'password' => null, // zkLogin doesn't need password
                 'wallet_address' => $walletAddress,
                 'zk_pin_hash' => Hash::make($request->zk_pin_verifier),
+                'zk_subject' => $request->zk_subject,
                 'kyc_status' => 'unverified',
                 'role' => 'user'
             ]);
@@ -57,6 +59,7 @@ class ZkLoginController extends Controller
 
             $updates = [
                 'name' => $user->name ?: ($request->name ?: 'Web3 User ' . substr($walletAddress, 0, 6)),
+                'zk_subject' => $user->zk_subject ?: $request->zk_subject,
             ];
 
             if (!$user->zk_pin_hash) {

@@ -6,7 +6,9 @@ use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -46,7 +48,25 @@ class ProfileController extends Controller
         $isPasswordlessWalletAccount = empty($user->password)
             && !empty($user->wallet_address ?? $user->sui_address);
 
-        if (!$isPasswordlessWalletAccount) {
+        if ($isPasswordlessWalletAccount) {
+            $request->validateWithBag('userDeletion', [
+                'zk_pin' => ['required', 'digits:6'],
+            ]);
+
+            if (!$user->zk_subject || !$user->zk_pin_hash) {
+                throw ValidationException::withMessages([
+                    'zk_pin' => 'Please sign out and sign in again with Google zkLogin before deleting this account.',
+                ])->errorBag('userDeletion');
+            }
+
+            $pinVerifier = hash('sha256', $user->zk_subject . '|' . $user->email . '|' . $request->zk_pin);
+
+            if (!Hash::check($pinVerifier, $user->zk_pin_hash)) {
+                throw ValidationException::withMessages([
+                    'zk_pin' => 'The Nuance PIN is incorrect.',
+                ])->errorBag('userDeletion');
+            }
+        } else {
             $request->validateWithBag('userDeletion', [
                 'password' => ['required', 'current_password'],
             ]);
